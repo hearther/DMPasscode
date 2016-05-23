@@ -21,6 +21,7 @@
 
 static DMPasscode* instance;
 static const NSString* KEYCHAIN_NAME = @"passcode";
+static const NSString* KEYCHAIN_NAME_ENABLE_TOUCH_ID = @"enableTouchId";
 static NSBundle* bundle;
 NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 
@@ -79,6 +80,14 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     [instance setConfig:config];
 }
 
++ (BOOL) canUseTouchIdInsteadOfPin{
+    return [instance canUseTouchIdInsteadOfPin];
+}
+
++ (void) setCanUseTouchIdInsteadOfPin:(BOOL)enable{
+    [instance setCanUseTouchIdInsteadOfPin:enable];
+}
+
 #pragma mark - Instance methods
 - (void)setupPasscodeInViewController:(UIViewController *)viewController completion:(PasscodeCompletionBlock)completion {
     _completion = completion;
@@ -88,8 +97,11 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 - (void)showPasscodeInViewController:(UIViewController *)viewController completion:(PasscodeCompletionBlock)completion {
     NSAssert([self isPasscodeSet], @"No passcode set");
     _completion = completion;
+    
     LAContext* context = [[LAContext alloc] init];
-    if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil]) {
+    if ([self canUseTouchIdInsteadOfPin] &&
+        [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil])
+    {
         [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics localizedReason:NSLocalizedString(@"dmpasscode_touchid_reason", nil) reply:^(BOOL success, NSError* error) {
             dispatch_async(dispatch_get_main_queue(), ^{
                 if (error) {
@@ -129,6 +141,17 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     BOOL ret = [[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME] != nil;
     return ret;
 }
+
+- (void) setCanUseTouchIdInsteadOfPin:(BOOL)can{
+    [[DMKeychain defaultKeychain] setObject:[NSNumber numberWithBool:can]
+                                     forKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
+}
+
+- (BOOL) canUseTouchIdInsteadOfPin{
+    NSNumber *enable = [[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
+    return [enable boolValue];
+}
+
 
 - (void)setConfig:(DMPasscodeConfig *)config {
     _config = config;

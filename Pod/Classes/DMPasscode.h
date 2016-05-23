@@ -60,4 +60,14 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
  */
 + (void)setConfig:(DMPasscodeConfig *)config;
 
+/**
+ *  Check if touch ID is enable
+ *
+ *  @return BOOL indicating if touch id is enable
+ */
+
++ (BOOL) canUseTouchIdInsteadOfPin;
+
++ (void) setCanUseTouchIdInsteadOfPin:(BOOL)can;
+
 @end
