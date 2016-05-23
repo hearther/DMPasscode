@@ -70,4 +70,6 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
 
 + (void) setCanUseTouchIdInsteadOfPin:(BOOL)can;
 
++ (BOOL) isDeviceSupportTouchId;
+
 @end

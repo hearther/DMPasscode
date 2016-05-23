@@ -88,6 +88,18 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     [instance setCanUseTouchIdInsteadOfPin:enable];
 }
 
++ (BOOL) isDeviceSupportTouchId{
+    LAContext* context = [[LAContext alloc] init];
+    if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
+                             error:nil])
+    {
+        return YES;
+    }
+    else {
+        return NO;
+    }
+}
+
 #pragma mark - Instance methods
 - (void)setupPasscodeInViewController:(UIViewController *)viewController completion:(PasscodeCompletionBlock)completion {
     _completion = completion;
