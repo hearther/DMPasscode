@@ -37,21 +37,25 @@
     [super viewDidLoad];
     self.view.backgroundColor = _config.backgroundColor;
     self.navigationController.navigationBar.barTintColor = _config.navigationBarBackgroundColor;
-    UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(close:)];
+    /*UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(close:)];
     closeItem.tintColor = _config.navigationBarForegroundColor;
-    self.navigationItem.leftBarButtonItem = closeItem;
+    self.navigationItem.leftBarButtonItem = closeItem;*/
     self.navigationController.navigationBar.barStyle = (UIBarStyle)_config.statusBarStyle;
     self.navigationController.navigationBar.titleTextAttributes = @{NSFontAttributeName :_config.navigationBarFont,
                                                                     NSForegroundColorAttributeName: _config.navigationBarTitleColor};
     self.title = _config.navigationBarTitle;
-    
+
+    if (_config.titleView != nil) {
+      self.navigationItem.titleView = _config.titleView;
+    }
+
     _instructions.frame = CGRectMake(0, 85, self.view.frame.size.width, 30);
     _instructions.font = _config.instructionsFont;
     _instructions.textColor = _config.descriptionColor;
     _instructions.textAlignment = NSTextAlignmentCenter;
     _instructions.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     [self.view addSubview:_instructions];
-    
+
     _error.frame = CGRectMake(0, 190, 0, 0); // size set when text is set
     _error.font = _config.errorFont;
     _error.textColor = _config.errorForegroundColor;
@@ -63,16 +67,16 @@
     _error.numberOfLines = 0;
     _error.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
     [self.view addSubview:_error];
-    
+
     CGFloat y_padding = 140;
     CGFloat itemWidth = 24;
     CGFloat space = 20;
-    CGFloat totalWidth = (itemWidth * 4) + (space * 3);
+    CGFloat totalWidth = (itemWidth * 6) + (space * 5);
     CGFloat x_padding = (self.view.bounds.size.width - totalWidth) / 2;
-    
+
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(x_padding, y_padding, totalWidth, itemWidth)];
     container.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 6; i++) {
         DMPasscodeInternalField* field = [[DMPasscodeInternalField alloc] initWithFrame:CGRectMake(((itemWidth + space) * i), 0, itemWidth, itemWidth) config:_config];
         UITapGestureRecognizer* singleFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
         [field addGestureRecognizer:singleFingerTap];
@@ -80,13 +84,16 @@
         [_textFields addObject:field];
     }
     [self.view addSubview:container];
-    
- 
+
+
     _input = [[UITextField alloc] initWithFrame:CGRectMake(0, 0, 0, 0)];
     [_input setDelegate:self];
     [_input addTarget:self action:@selector(editingChanged:) forControlEvents:UIControlEventEditingChanged];
-    _input.keyboardType = UIKeyboardTypeNumberPad;
+    _input.keyboardType = UIKeyboardTypeNamePhonePad;
     _input.keyboardAppearance = _config.inputKeyboardAppearance;
+    // _input.secureTextEntry = YES;
+    _input.autocorrectionType = UITextAutocorrectionTypeNo;
+    _input.autocapitalizationType = UITextAutocapitalizationTypeNone;
     [self.view addSubview:_input];
     [_input becomeFirstResponder];
 }
@@ -104,7 +111,7 @@
     NSUInteger rangeLength = range.length;
     NSUInteger newLength = oldLength - rangeLength + replacementLength;
     BOOL returnKey = [string rangeOfString: @"\n"].location != NSNotFound;
-    return newLength <= 4|| returnKey;
+    return newLength <= 6|| returnKey;
 }
 
 - (void)editingChanged:(UITextField *)sender {
@@ -115,13 +122,13 @@
         range.location = i;
         field.text = [sender.text substringWithRange:range];
     }
-    for (int i = (int)sender.text.length; i < 4; i++) {
+    for (int i = (int)sender.text.length; i < 6; i++) {
         DMPasscodeInternalField* field = [_textFields objectAtIndex:i];
         field.text = @"";
     }
-    
+
     NSString* code = sender.text;
-    if (code.length == 4) {
+    if (code.length == 6) {
         [_delegate enteredCode:code];
     }
 }
@@ -142,7 +149,7 @@
 - (void)setErrorMessage:(NSString *)errorMessage {
     _error.text = errorMessage;
     _error.alpha = errorMessage.length > 0 ? 1.0f : 0.0f;
-    
+
     CGSize size = [_error.text sizeWithAttributes:@{NSFontAttributeName: _error.font}];
     size.width += 28;
     size.height += 28;
