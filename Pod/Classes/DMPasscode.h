@@ -15,6 +15,7 @@ typedef void (^PasscodeCompletionBlock)(BOOL success, NSError *error);
 typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
 {
     DMErrorUnlocking = -1,
+    DMMaxAttempts    = -2
 };
 
 /**
@@ -71,5 +72,6 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
 + (void) setCanUseTouchIdInsteadOfPin:(BOOL)can;
 
 + (BOOL) isDeviceSupportTouchId;
+
 
 @end

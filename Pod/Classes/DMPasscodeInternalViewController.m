@@ -71,12 +71,14 @@
     CGFloat y_padding = 140;
     CGFloat itemWidth = 24;
     CGFloat space = 20;
-    CGFloat totalWidth = (itemWidth * 6) + (space * 5);
+    
+    int fieldNum = _config.passFieldNum;
+    CGFloat totalWidth = (itemWidth * fieldNum) + (space * (fieldNum-1));
     CGFloat x_padding = (self.view.bounds.size.width - totalWidth) / 2;
 
     UIView *container = [[UIView alloc] initWithFrame:CGRectMake(x_padding, y_padding, totalWidth, itemWidth)];
     container.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < fieldNum; i++) {
         DMPasscodeInternalField* field = [[DMPasscodeInternalField alloc] initWithFrame:CGRectMake(((itemWidth + space) * i), 0, itemWidth, itemWidth) config:_config];
         UITapGestureRecognizer* singleFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTap:)];
         [field addGestureRecognizer:singleFingerTap];
@@ -111,7 +113,7 @@
     NSUInteger rangeLength = range.length;
     NSUInteger newLength = oldLength - rangeLength + replacementLength;
     BOOL returnKey = [string rangeOfString: @"\n"].location != NSNotFound;
-    return newLength <= 6|| returnKey;
+    return newLength <= _config.passFieldNum|| returnKey;
 }
 
 - (void)editingChanged:(UITextField *)sender {
@@ -122,13 +124,13 @@
         range.location = i;
         field.text = [sender.text substringWithRange:range];
     }
-    for (int i = (int)sender.text.length; i < 6; i++) {
+    for (int i = (int)sender.text.length; i < _config.passFieldNum; i++) {
         DMPasscodeInternalField* field = [_textFields objectAtIndex:i];
         field.text = @"";
     }
 
     NSString* code = sender.text;
-    if (code.length == 6) {
+    if (code.length == _config.passFieldNum) {
         [_delegate enteredCode:code];
     }
 }

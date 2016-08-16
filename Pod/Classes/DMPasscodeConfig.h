@@ -93,4 +93,8 @@
 
 @property (nonatomic, strong) UIView * titleView;
 
+@property (nonatomic) int passFieldNum; //default is 4
+@property (nonatomic) int maxAttempts; //default is 3
+@property (nonatomic) long long maxAttemptsFailWaitSeconds; //default is 120
+
 @end

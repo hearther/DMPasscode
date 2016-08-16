@@ -22,6 +22,7 @@
 static DMPasscode* instance;
 static const NSString* KEYCHAIN_NAME = @"passcode";
 static const NSString* KEYCHAIN_NAME_ENABLE_TOUCH_ID = @"enableTouchId";
+static const NSString* KEYCHAIN_NAME_MAX_ATTEMPTS_TIME = @"maxAttemptTime";
 static NSBundle* bundle;
 NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 
@@ -45,10 +46,19 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 
 - (instancetype)init {
     if (self = [super init]) {
+//        [self resetKeyChain];
         _config = [[DMPasscodeConfig alloc] init];
     }
     return self;
 }
+#ifdef DEBUG
+- (void)resetKeyChain{
+    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME];
+    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
+    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
+}
+
+#endif
 
 + (NSBundle*)bundleWithName:(NSString*)name {
     NSString* mainBundlePath = [[NSBundle mainBundle] resourcePath];
@@ -88,6 +98,10 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     [instance setCanUseTouchIdInsteadOfPin:enable];
 }
 
++ (double) maxAttemptsTime{
+    return [instance maxAttemptsTime];
+}
+
 + (BOOL) isDeviceSupportTouchId{
     LAContext* context = [[LAContext alloc] init];
     if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
@@ -109,6 +123,21 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 - (void)showPasscodeInViewController:(UIViewController *)viewController completion:(PasscodeCompletionBlock)completion {
     NSAssert([self isPasscodeSet], @"No passcode set");
     _completion = completion;
+ 
+    double maxAttemptsTime = [self maxAttemptsTime];
+    
+    if (maxAttemptsTime >0)
+    {
+        NSTimeInterval curTimestamp = [[NSDate date] timeIntervalSince1970];
+        //last is max attemp need to wait unitl ....
+        if (curTimestamp < maxAttemptsTime+_config.maxAttemptsFailWaitSeconds){
+            NSError *error = [NSError errorWithDomain:@"DMPasscode"
+                                                 code:DMMaxAttempts
+                                             userInfo:nil];
+            _completion(NO, error);
+            return;
+        }
+    }
     
     LAContext* context = [[LAContext alloc] init];
     if ([self canUseTouchIdInsteadOfPin] &&
@@ -164,6 +193,12 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     return [enable boolValue];
 }
 
+- (double) maxAttemptsTime{
+    NSNumber *date = [[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
+    double ret = [date doubleValue];
+    return ret;
+}
+
 
 - (void)setConfig:(DMPasscodeConfig *)config {
     _config = config;
@@ -214,15 +249,16 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
         if ([code isEqualToString:[[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME]]) {
             [self closeAndNotify:YES withError:nil];
         } else {
-            if (_count == 1) {
-                [_passcodeViewController setErrorMessage:NSLocalizedString(@"dmpasscode_1_left", nil)];
-            } else {
-                [_passcodeViewController setErrorMessage:[NSString stringWithFormat:NSLocalizedString(@"dmpasscode_n_left", nil), 2 - _count]];
-            }
+            
+            [_passcodeViewController setErrorMessage:[NSString stringWithFormat:NSLocalizedString(@"dmpasscode_n_left", nil), (_config.maxAttempts-1) - _count]];
+            
             [_passcodeViewController reset];
-            if (_count >= 2) { // max 3 attempts
+            if (_count >= (_config.maxAttempts-1)) { // max attempts
                 NSError *errorMatchingPins = [NSError errorWithDomain:DMUnlockErrorDomain code:DMErrorUnlocking userInfo:nil];
                 [self closeAndNotify:NO withError:errorMatchingPins];
+                NSTimeInterval timestamp = [[NSDate date] timeIntervalSince1970];
+                [[DMKeychain defaultKeychain] setObject:[NSNumber numberWithDouble:timestamp]
+                                                 forKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
             }
         }
     }

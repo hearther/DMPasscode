@@ -29,6 +29,9 @@
         self.navigationBarFont = [UIFont systemFontOfSize:16];
         self.navigationBarTitleColor = [UIColor darkTextColor];
         self.titleView = nil;
+        self.passFieldNum = 4;
+        self.maxAttemptsFailWaitSeconds = 120;
+        self.maxAttempts = 3;
     }
     return self;
 }
