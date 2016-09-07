@@ -1,8 +1,8 @@
-target 'DMPasscode', :exclusive => true do
+target 'DMPasscode' do
   pod "DMPasscode", :path => "../"
 end
 
-target 'Tests', :exclusive => true do
+target 'Tests' do
   pod "DMPasscode", :path => "../"
 
   pod 'Specta', '0.2.1'

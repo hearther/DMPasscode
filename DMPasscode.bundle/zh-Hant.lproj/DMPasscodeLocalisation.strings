@@ -1,0 +1,9 @@
+"dmpasscode_enter_new_code" = "輸入新密碼";
+"dmpasscode_enter_to_unlock" = "Enter code to unlock";
+"dmpasscode_repeat" = "Repeat code";
+"dmpasscode_not_match" = "Your codes did not match.\nPlease try again.";
+"dmpasscode_okay" = "確定";
+"dmpasscode_n_left" = "%i attempts left";
+"dmpasscode_1_left" = "1 attempt left";
+"dmpasscode_touchid_reason" = "Authenticate to access locked feature.";
+"dmpasscode_enter_new_code_detail" = "密碼設定後，使用密碼或Touch ID解鎖APP...<font color=\"blue\"><u>更多</u></font>";
