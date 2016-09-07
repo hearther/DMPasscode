@@ -5,9 +5,9 @@ end
 target 'Tests', :exclusive => true do
   pod "DMPasscode", :path => "../"
 
-  pod 'Specta', '~> 0.2.1'
-  pod 'Expecta'
-  pod 'FBSnapshotTestCase'
-  pod 'Expecta+Snapshots'
+  pod 'Specta', '0.2.1'
+  pod 'Expecta', '0.4.0'
+  pod 'FBSnapshotTestCase', '1.6'
+  pod 'Expecta+Snapshots', '1.3.2'
   pod 'GRAESCrypt', '~> 1.0'
 end
