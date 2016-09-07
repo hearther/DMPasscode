@@ -20,6 +20,7 @@
     UILabel* _instructions;
     UILabel* _error;
     DMPasscodeConfig* _config;
+    UIButton* _detail;
 }
 
 - (id)initWithDelegate:(id<DMPasscodeInternalViewControllerDelegate>)delegate config:(DMPasscodeConfig *)config {
@@ -29,6 +30,7 @@
         _instructions = [[UILabel alloc] init];
         _error = [[UILabel alloc] init];
         _textFields = [[NSMutableArray alloc] init];
+        _detail = [[UIButton alloc] init];
     }
     return self;
 }
@@ -37,9 +39,9 @@
     [super viewDidLoad];
     self.view.backgroundColor = _config.backgroundColor;
     self.navigationController.navigationBar.barTintColor = _config.navigationBarBackgroundColor;
-    /*UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(close:)];
+    UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(close:)];
     closeItem.tintColor = _config.navigationBarForegroundColor;
-    self.navigationItem.leftBarButtonItem = closeItem;*/
+    self.navigationItem.leftBarButtonItem = closeItem;
     self.navigationController.navigationBar.barStyle = (UIBarStyle)_config.statusBarStyle;
     self.navigationController.navigationBar.titleTextAttributes = @{NSFontAttributeName :_config.navigationBarFont,
                                                                     NSForegroundColorAttributeName: _config.navigationBarTitleColor};
@@ -98,6 +100,17 @@
     _input.autocapitalizationType = UITextAutocapitalizationTypeNone;
     [self.view addSubview:_input];
     [_input becomeFirstResponder];
+    
+    
+    _detail.frame = CGRectMake(0, 190, 0, 0);
+    [_detail setBackgroundColor:[UIColor clearColor]];
+    _detail.font = _config.instructionsFont;
+    _detail.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+    _detail.titleLabel.textColor = _config.descriptionColor;
+    _detail.titleLabel.textAlignment = NSTextAlignmentCenter;
+    _detail.titleLabel.numberOfLines = 0;
+    _detail.titleLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+    [self.view addSubview:_detail];
 }
 
 -(void)handleSingleTap:(UITapGestureRecognizer *)recognizer {
@@ -130,8 +143,12 @@
     }
 
     NSString* code = sender.text;
-    if (code.length == _config.passFieldNum) {
-        [_delegate enteredCode:code];
+    if (code.length == _config.passFieldNum)
+    {
+        //delay 0.5 seconds for UI animate
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            [_delegate enteredCode:code];
+        });
     }
 }
 
@@ -149,6 +166,12 @@
 }
 
 - (void)setErrorMessage:(NSString *)errorMessage {
+    if (errorMessage.length == 0){
+        [_detail setHidden:NO];
+    }
+    else {
+        [_detail setHidden:YES];
+    }
     _error.text = errorMessage;
     _error.alpha = errorMessage.length > 0 ? 1.0f : 0.0f;
 
@@ -161,6 +184,37 @@
 - (void)setInstructions:(NSString *)instructions {
     _instructions.text = instructions;
 }
+- (void)setDetail:(NSString *)detail
+        tapTarget:(id) target
+        tapAction:(SEL)action
+{
+    
+    NSMutableParagraphStyle *style = [[NSParagraphStyle defaultParagraphStyle] mutableCopy];
+    [style setAlignment:NSTextAlignmentCenter];
+    [style setLineBreakMode:NSLineBreakByWordWrapping];
+    
+    NSMutableAttributedString* htmlStr =
+    [[NSMutableAttributedString alloc] initWithData:[detail dataUsingEncoding:NSUTF8StringEncoding]
+                                            options:@{NSDocumentTypeDocumentAttribute: NSHTMLTextDocumentType,                                                                                       NSCharacterEncodingDocumentAttribute: [NSNumber numberWithInt:NSUTF8StringEncoding]}
+                                 documentAttributes:nil
+                                              error:nil];
+    [htmlStr addAttributes:@{NSParagraphStyleAttributeName: style}
+                     range:NSMakeRange(0, htmlStr.length)];
+    
+    [_detail setAttributedTitle:htmlStr forState:UIControlStateNormal];
+    
+    CGSize size = [_detail.titleLabel.text sizeWithAttributes:@{NSFontAttributeName: _detail.titleLabel.font}];
+    size.width = MIN(self.view.frame.size.width-28, size.width+28);
+    size.height += 28;
+    _detail.frame = CGRectMake(self.view.frame.size.width / 2 - size.width / 2, _detail.frame.origin.y, size.width, size.height);
+
+    if (target != NULL && action != NULL){
+        [_detail addTarget:target
+                    action:action
+          forControlEvents:UIControlEventTouchUpInside];
+    }
+}
+
 
 
 @end

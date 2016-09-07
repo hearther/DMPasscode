@@ -17,7 +17,7 @@
     BOOL _showingPasscode;
 }
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {    
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     self.window.backgroundColor = [UIColor whiteColor];
     [self.window makeKeyAndVisible];
@@ -26,7 +26,7 @@
     [self addViews];
     [self updateViews];
     
-    /*
+    
     // Example for a different config.
      
     DMPasscodeConfig* config = [[DMPasscodeConfig alloc] init];
@@ -36,7 +36,7 @@
     config.emptyFieldColor = [UIColor colorWithRed:0.10 green:0.34 blue:0.61 alpha:1.00];
     config.statusBarStyle = UIStatusBarStyleLightContent;
     [DMPasscode setConfig:config];
-    */
+    
      
     return YES;
 }
@@ -70,13 +70,16 @@
 }
 
 - (void)actionCheck:(UIButton *)sender {
-    [DMPasscode showPasscodeInViewController:_rootViewController completion:^(BOOL success, NSError *error) {
+    [DMPasscode showPasscodeInViewController:_rootViewController
+                                  completion:^(BOOL success, NSError *error)
+    {
         if (success) {
             [sender setTitleColor:[UIColor greenColor] forState:UIControlStateNormal];
         } else {
             if (error) {
                 // Failed authentication
                 [sender setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
+                NSLog(@"%d", error.code);
             } else {
                 // Cancelled
                 [sender setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];

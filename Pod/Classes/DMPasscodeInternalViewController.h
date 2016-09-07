@@ -24,5 +24,7 @@
 - (void)reset;
 - (void)setErrorMessage:(NSString *)errorMessage;
 - (void)setInstructions:(NSString *)instructions;
-
+- (void)setDetail:(NSString *)detail
+        tapTarget:(id) target
+        tapAction:(SEL)action;
 @end

@@ -214,6 +214,11 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     [viewController presentViewController:nc animated:YES completion:nil];
     if (_mode == 0) {
         [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_new_code", nil)];
+        
+        NSString *htmlString = NSLocalizedString(@"dmpasscode_enter_new_code_detail", nil);                
+        [_passcodeViewController setDetail:htmlString
+                                 tapTarget:self
+                                 tapAction:@selector(test:)];
     } else if (_mode == 1) {
         [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_to_unlock", nil)];
     }
@@ -250,6 +255,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
             [self closeAndNotify:YES withError:nil];
         } else {
             
+            if (_config.maxAttempts > 0){
             [_passcodeViewController setErrorMessage:[NSString stringWithFormat:NSLocalizedString(@"dmpasscode_n_left", nil), (_config.maxAttempts-1) - _count]];
             
             [_passcodeViewController reset];
@@ -261,6 +267,10 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
                                                  forKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
             }
         }
+            else {
+                [_passcodeViewController reset];
+            }
+        }
     }
     _count++;
 }
@@ -269,4 +279,11 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     _completion(NO, nil);
 }
 
+- (void)test:(id)sender{
+    
+#ifdef Transcend
+    [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"http://tw.transcend-info.com/Support/FAQ-1014"]];
+#endif
+    
+}
 @end
