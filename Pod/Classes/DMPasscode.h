@@ -73,5 +73,7 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
 
 + (BOOL) isDeviceSupportTouchId;
 
+//RESET KEYCHAIN
++ (void)resetKeyChain;
 
 @end

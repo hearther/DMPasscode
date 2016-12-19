@@ -15,8 +15,8 @@
 #import <LocalAuthentication/LocalAuthentication.h>
 #endif
 
-#undef NSLocalizedString
-#define NSLocalizedString(key, comment) \
+//#undef NSLocalizedString
+//#define NSLocalizedString(key, comment) \
 [bundle localizedStringForKey:(key) value:@"" table:@"DMPasscodeLocalisation"]
 
 static DMPasscode* instance;
@@ -46,19 +46,13 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 
 - (instancetype)init {
     if (self = [super init]) {
-//        [self resetKeyChain];
         _config = [[DMPasscodeConfig alloc] init];
     }
     return self;
 }
-#ifdef DEBUG
-- (void)resetKeyChain{
-    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME];
-    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
-    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
-}
 
-#endif
+
+
 
 + (NSBundle*)bundleWithName:(NSString*)name {
     NSString* mainBundlePath = [[NSBundle mainBundle] resourcePath];
@@ -114,6 +108,11 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     }
 }
 
++ (void)resetKeyChain{
+    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME];
+    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
+    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
+}
 #pragma mark - Instance methods
 - (void)setupPasscodeInViewController:(UIViewController *)viewController completion:(PasscodeCompletionBlock)completion {
     _completion = completion;
