@@ -137,40 +137,8 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
             return;
         }
     }
-    
-    LAContext* context = [[LAContext alloc] init];
-    if ([self canUseTouchIdInsteadOfPin] &&
-        [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil])
-    {
-        [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics localizedReason:NSLocalizedString(@"dmpasscode_touchid_reason", nil) reply:^(BOOL success, NSError* error) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                if (error) {
-                    switch (error.code) {
-                        case LAErrorUserCancel:
-                            _completion(NO, nil);
-                            break;
-                        case LAErrorSystemCancel:
-                            _completion(NO, nil);
-                            break;
-                        case LAErrorAuthenticationFailed:
-                            _completion(NO, error);
-                            break;
-                        case LAErrorPasscodeNotSet:
-                        case LAErrorTouchIDNotEnrolled:
-                        case LAErrorTouchIDNotAvailable:
-                        case LAErrorUserFallback:
-                            [self openPasscodeWithMode:1 viewController:viewController];
-                            break;
-                    }
-                } else {
-                    _completion(success, nil);
-                }
-            });
-        }];
-    } else {
-        // no touch id available
-        [self openPasscodeWithMode:1 viewController:viewController];
-    }
+    // show pass code view
+    [self openPasscodeWithMode:1 viewController:viewController];
 }
 
 - (void)removePasscode {
@@ -210,7 +178,26 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     _passcodeViewController = [[DMPasscodeInternalViewController alloc] initWithDelegate:self config:_config];
     DMPasscodeInternalNavigationController* nc = [[DMPasscodeInternalNavigationController alloc] initWithRootViewController:_passcodeViewController];
     [nc setModalPresentationStyle:UIModalPresentationFormSheet];
-    [viewController presentViewController:nc animated:YES completion:nil];
+    [viewController presentViewController:nc
+                                 animated:YES
+                               completion:^
+    {
+        LAContext* context = [[LAContext alloc] init];
+        if ([self canUseTouchIdInsteadOfPin] &&
+            [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil])
+        {
+            [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
+                    localizedReason:NSLocalizedString(@"dmpasscode_touchid_reason", nil) reply:^(BOOL success, NSError* error) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    if (error) {
+                        [self closeAndNotify:NO withError:error];
+                    } else {
+                        [self closeAndNotify:YES withError:nil];
+                    }
+                });
+            }];
+        }
+    }];
     if (_mode == 0) {
         [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_new_code", nil)];
         

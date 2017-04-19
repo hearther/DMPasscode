@@ -23,6 +23,7 @@
         self.errorForegroundColor = [UIColor whiteColor];
         self.descriptionColor = [UIColor colorWithWhite:0.2 alpha:1.0];
         self.inputKeyboardAppearance = UIKeyboardAppearanceDefault;
+        self.defaultKeyboardType = UIKeyboardTypeNamePhonePad;
         self.errorFont = [UIFont systemFontOfSize:14];
         self.instructionsFont = [UIFont systemFontOfSize:16];
         self.navigationBarTitle = @"";

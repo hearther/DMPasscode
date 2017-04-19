@@ -66,6 +66,8 @@
  */
 @property (nonatomic) UIKeyboardAppearance inputKeyboardAppearance;
 
+@property (nonatomic) UIKeyboardType defaultKeyboardType;
+
 /**
  *  The font used for instructions.
  */
