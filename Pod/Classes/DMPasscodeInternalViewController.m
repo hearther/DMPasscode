@@ -21,9 +21,13 @@
     UILabel* _error;
     DMPasscodeConfig* _config;
     UIButton* _detail;
+    BOOL _needCloseBtn;
 }
 
-- (id)initWithDelegate:(id<DMPasscodeInternalViewControllerDelegate>)delegate config:(DMPasscodeConfig *)config {
+- (id)initWithDelegate:(id<DMPasscodeInternalViewControllerDelegate>)delegate
+                config:(DMPasscodeConfig *)config
+          needCloseBtn:(BOOL)needCloseBtn
+{
     if (self = [super init]) {
         _delegate = delegate;
         _config = config;
@@ -31,6 +35,7 @@
         _error = [[UILabel alloc] init];
         _textFields = [[NSMutableArray alloc] init];
         _detail = [[UIButton alloc] init];
+        _needCloseBtn = needCloseBtn;
     }
     return self;
 }
@@ -39,9 +44,11 @@
     [super viewDidLoad];
     self.view.backgroundColor = _config.backgroundColor;
     self.navigationController.navigationBar.barTintColor = _config.navigationBarBackgroundColor;
+    if (_needCloseBtn){
     UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(close:)];
     closeItem.tintColor = _config.navigationBarForegroundColor;
     self.navigationItem.leftBarButtonItem = closeItem;
+    }
     self.navigationController.navigationBar.barStyle = (UIBarStyle)_config.statusBarStyle;
     self.navigationController.navigationBar.titleTextAttributes = @{NSFontAttributeName :_config.navigationBarFont,
                                                                     NSForegroundColorAttributeName: _config.navigationBarTitleColor};
