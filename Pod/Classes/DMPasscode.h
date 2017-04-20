@@ -45,7 +45,13 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
 + (void)showPasscodeInViewController:(UIViewController *)viewController
                           strictAuth:(BOOL)strictAuth
                           completion:(PasscodeCompletionBlock)completion;
-
+/**
+ *  Authenticate the user.
+ *
+ *  @param completion     The completion block with a BOOL to inidcate if the authentication was successful (and NSError if not)
+    @return UIViewController pass code view controller for display 
+ */
++ (UIViewController *)strictPasscodeVCCompletion:(PasscodeCompletionBlock)completion;
 /**
  *  Remove the passcode from the keychain.
  */

@@ -13,7 +13,8 @@
 
 - (void)enteredCode:(NSString *)code;
 - (void)canceled;
-
+@optional
+- (void) viewDidAppear;
 @end
 
 @class DMPasscodeConfig;

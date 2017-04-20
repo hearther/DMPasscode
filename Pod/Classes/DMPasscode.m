@@ -33,6 +33,8 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     PasscodeCompletionBlock _completion;
     DMPasscodeInternalViewController* _passcodeViewController;
     int _mode; // 0 = setup, 1 = input, 2 = strict auth, user can't be cancel this
+    // 3 = strict auth, user can't be cancel this, and return DMPasscodeInternalViewController for
+    // other to display
     int _count;
     NSString* _prevCode;
     DMPasscodeConfig* _config;
@@ -74,6 +76,19 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     [instance showPasscodeInViewController:viewController
                                 strictAuth:strictAuth
                                 completion:completion];
+}
+
++ (void)showPasscodeInViewController:(UIViewController *)viewController
+                          completion:(PasscodeCompletionBlock)completion
+{
+    [self showPasscodeInViewController:viewController
+                            strictAuth:NO
+                            completion:completion];
+}
+
++ (UIViewController *)strictPasscodeVCCompletion:(PasscodeCompletionBlock)completion
+{
+    return [instance strictPasscodeViewControllerCompletion:completion];
 }
 
 + (void)removePasscode {
@@ -122,12 +137,15 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     _completion = completion;
     [self openPasscodeWithMode:0 viewController:viewController];
 }
-+ (void)showPasscodeInViewController:(UIViewController *)viewController
-                          completion:(PasscodeCompletionBlock)completion
+
+
+- (UIViewController *)strictPasscodeViewControllerCompletion:(PasscodeCompletionBlock)completion
 {
-    [self showPasscodeInViewController:viewController
-                            strictAuth:NO
-                            completion:completion];
+    NSAssert([self isPasscodeSet], @"No passcode set");
+    _completion = completion;
+    
+    // show pass code view
+    return [self strictPasscodeVC];
 }
 
 - (void)showPasscodeInViewController:(UIViewController *)viewController
@@ -186,6 +204,22 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 }
 
 #pragma mark - Private
+- (UIViewController *) strictPasscodeVC
+{
+    _mode = 3;
+    _count = 0;
+    _passcodeViewController =
+    [[DMPasscodeInternalViewController alloc] initWithDelegate:self
+                                                        config:_config
+                                                  needCloseBtn:NO];
+    DMPasscodeInternalNavigationController* nc = [[DMPasscodeInternalNavigationController alloc] initWithRootViewController:_passcodeViewController];
+
+    [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_to_unlock", nil)];
+    nc.navigationItem.leftBarButtonItem = NULL;
+    
+    return nc;
+}
+
 - (void)openPasscodeWithMode:(int)mode viewController:(UIViewController *)viewController {
     _mode = mode;
     _count = 0;
@@ -194,7 +228,6 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
                                                         config:_config
                                                   needCloseBtn:mode==2?NO:YES];
     DMPasscodeInternalNavigationController* nc = [[DMPasscodeInternalNavigationController alloc] initWithRootViewController:_passcodeViewController];
-    [nc setModalPresentationStyle:UIModalPresentationFormSheet];
     [viewController presentViewController:nc
                                  animated:YES
                                completion:^
@@ -231,12 +264,45 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 }
 
 - (void)closeAndNotify:(BOOL)success withError:(NSError *)error {
+    if (_passcodeViewController.presentingViewController != NULL) {
     [_passcodeViewController dismissViewControllerAnimated:YES completion:^() {
         _completion(success, error);
     }];
 }
+    else {
+       _completion(success, error);
+    }
+}
 
 #pragma mark - DMPasscodeInternalViewControllerDelegate
+- (void)viewDidAppear
+{
+    NSLog(@"%s _mode %d",__func__, _mode);
+    if (_mode == 3)
+    {
+        
+        LAContext* context = [[LAContext alloc] init];
+        NSError *error;
+        
+        if ([self canUseTouchIdInsteadOfPin] &&
+            [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
+                                 error:&error])
+        {
+            [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
+                    localizedReason:NSLocalizedString(@"dmpasscode_touchid_reason", nil)
+                              reply:^(BOOL success, NSError* error)
+             {
+                 if (success) {
+                     dispatch_async(dispatch_get_main_queue(), ^{
+                      [self closeAndNotify:YES withError:nil];
+                  });
+                     NSLog(@"%s evaluatePolicy error %@",__func__, error);
+              }
+          }];
+        }
+        NSLog(@"%s canEvaluatePolicy error %@",__func__, error);
+    }
+}
 - (void)enteredCode:(NSString *)code {
     if (_mode == 0) {
         if (_count == 0) {
@@ -256,7 +322,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
                 return;
             }
         }
-    } else if (_mode == 1 || _mode == 2) {
+    } else if (_mode == 1 || _mode == 2 || _mode == 3) {
         if ([code isEqualToString:[[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME]]) {
             [self closeAndNotify:YES withError:nil];
         } else {

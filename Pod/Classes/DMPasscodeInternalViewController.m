@@ -120,6 +120,14 @@
     [self.view addSubview:_detail];
 }
 
+- (void)viewDidAppear:(BOOL)animated{
+    [super viewDidAppear:animated];
+    //wait for ui to finish
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        [_delegate viewDidAppear];
+    });
+}
+
 -(void)handleSingleTap:(UITapGestureRecognizer *)recognizer {
     if([_input isFirstResponder]){
         [_input resignFirstResponder];
