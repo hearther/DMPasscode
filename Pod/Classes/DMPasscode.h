@@ -77,11 +77,12 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
  *  @return BOOL indicating if touch id is enable
  */
 
-+ (BOOL) canUseTouchIdInsteadOfPin;
++ (BOOL) canUseBioIdInsteadOfPin;
 
-+ (void) setCanUseTouchIdInsteadOfPin:(BOOL)can;
++ (void) setCanUseBioIdInsteadOfPin:(BOOL)can;
 
-+ (BOOL) isDeviceSupportTouchId;
++ (BOOL) isDeviceSupportBioId;
+
 
 //RESET KEYCHAIN
 + (void)resetKeyChain;

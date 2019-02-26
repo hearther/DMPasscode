@@ -21,7 +21,7 @@
 
 static DMPasscode* instance;
 static const NSString* KEYCHAIN_NAME = @"passcode";
-static const NSString* KEYCHAIN_NAME_ENABLE_TOUCH_ID = @"enableTouchId";
+static const NSString* KEYCHAIN_NAME_ENABLE_BIO_ID = @"enableBioId";
 static const NSString* KEYCHAIN_NAME_MAX_ATTEMPTS_TIME = @"maxAttemptTime";
 static NSBundle* bundle;
 NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
@@ -103,19 +103,19 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     [instance setConfig:config];
 }
 
-+ (BOOL) canUseTouchIdInsteadOfPin{
-    return [instance canUseTouchIdInsteadOfPin];
++ (BOOL) canUseBioIdInsteadOfPin{
+    return [instance canUseBioIdInsteadOfPin];
 }
 
-+ (void) setCanUseTouchIdInsteadOfPin:(BOOL)enable{
-    [instance setCanUseTouchIdInsteadOfPin:enable];
++ (void) setCanUseBioIdInsteadOfPin:(BOOL)enable{
+    [instance setCanUseBioIdInsteadOfPin:enable];
 }
 
 + (double) maxAttemptsTime{
     return [instance maxAttemptsTime];
 }
 
-+ (BOOL) isDeviceSupportTouchId{
++ (BOOL) isDeviceSupportBioId{
     LAContext* context = [[LAContext alloc] init];
     if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
                              error:nil])
@@ -129,7 +129,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 
 + (void)resetKeyChain{
     [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME];
-    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
+    [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_ENABLE_BIO_ID];
     [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
 }
 #pragma mark - Instance methods
@@ -182,15 +182,17 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     return ret;
 }
 
-- (void) setCanUseTouchIdInsteadOfPin:(BOOL)can{
+- (void) setCanUseBioIdInsteadOfPin:(BOOL)can{
     [[DMKeychain defaultKeychain] setObject:[NSNumber numberWithBool:can]
-                                     forKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
+                                     forKey:KEYCHAIN_NAME_ENABLE_BIO_ID];
 }
 
-- (BOOL) canUseTouchIdInsteadOfPin{
-    NSNumber *enable = [[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME_ENABLE_TOUCH_ID];
+
+- (BOOL) canUseBioIdInsteadOfPin{
+    NSNumber *enable = [[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME_ENABLE_BIO_ID];
     return [enable boolValue];
 }
+
 
 - (double) maxAttemptsTime{
     NSNumber *date = [[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
@@ -233,7 +235,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
                                completion:^
     {
         LAContext* context = [[LAContext alloc] init];
-        if ([self canUseTouchIdInsteadOfPin] &&
+        if ([self canUseBioIdInsteadOfPin] &&
             [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil])
         {
             [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
@@ -283,8 +285,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
         
         LAContext* context = [[LAContext alloc] init];
         NSError *error;
-        
-        if ([self canUseTouchIdInsteadOfPin] &&
+        if ([self canUseBioIdInsteadOfPin] &&
             [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
                                  error:&error])
         {
