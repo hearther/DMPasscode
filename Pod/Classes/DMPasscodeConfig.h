@@ -99,4 +99,7 @@
 @property (nonatomic) int maxAttempts; //default is 3, <0 means allow infinite attempt
 @property (nonatomic) long long maxAttemptsFailWaitSeconds; //default is 120
 @property (nonatomic) NSString *detailOpenURL;
+
+
+@property (nonatomic) NSString *backImgName, *closeImgName;
 @end

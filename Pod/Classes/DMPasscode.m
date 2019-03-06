@@ -15,6 +15,37 @@
 #import <LocalAuthentication/LocalAuthentication.h>
 #endif
 
+#import <QuartzCore/QuartzCore.h>
+
+typedef NS_ENUM(NSInteger, DMPassCodeModes)
+{
+    DMPassCodeSetUp          = 0,
+    DMPassCodeInput          = 1,
+    DMPassCodeResetInput     = 2,
+    DMPasscodeStrictAuth    = 3,
+    DMPasscodeStrictAuthC    = 4,
+    
+};
+//_mode
+// DMPassCodeSetUp = setup
+// DMPassCodeInput = input,
+// DMPasscodeStrictAuth = strict auth, user can't be cancel this
+// DMPasscodeStrictAuthC = strict auth, user can't be cancel this, and return DMPasscodeInternalViewController for other to display
+
+@implementation UINavigationController (CompletionHandler)
+
+- (void)completionhandler_pushViewController:(UIViewController *)viewController
+                                    animated:(BOOL)animated
+                                  completion:(void (^)(void))completion
+{
+    [CATransaction begin];
+    [CATransaction setCompletionBlock:completion];
+    [self pushViewController:viewController animated:animated];
+    [CATransaction commit];
+}
+
+@end
+
 //#undef NSLocalizedString
 //#define NSLocalizedString(key, comment) \
 [bundle localizedStringForKey:(key) value:@"" table:@"DMPasscodeLocalisation"]
@@ -32,9 +63,8 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 @implementation DMPasscode {
     PasscodeCompletionBlock _completion;
     DMPasscodeInternalViewController* _passcodeViewController;
-    int _mode; // 0 = setup, 1 = input, 2 = strict auth, user can't be cancel this
-    // 3 = strict auth, user can't be cancel this, and return DMPasscodeInternalViewController for
-    // other to display
+    DMPassCodeModes _mode;
+    BOOL _pushInSheetNav;
     int _count;
     NSString* _prevCode;
     DMPasscodeConfig* _config;
@@ -132,6 +162,20 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_ENABLE_BIO_ID];
     [[DMKeychain defaultKeychain] removeObjectForKey:KEYCHAIN_NAME_MAX_ATTEMPTS_TIME];
 }
+
+// added by bunny
++ (void)setupPasscodeInSheetNavViewController:(UINavigationController *)navController
+                              completion:(PasscodeCompletionBlock)completion
+{
+    [instance setupPasscodeInSheetNavViewController:navController completion:completion];
+}
+
++ (void)showResetPasscodeInSheetNavViewController:(UINavigationController *)navController
+                                 completion:(PasscodeCompletionBlock)completion
+{
+    [instance showResetPasscodeInSheetNavViewController:navController completion:completion];
+}
+
 #pragma mark - Instance methods
 - (void)setupPasscodeInViewController:(UIViewController *)viewController completion:(PasscodeCompletionBlock)completion {
     _completion = completion;
@@ -205,11 +249,83 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     _config = config;
 }
 
+- (void)setupPasscodeInSheetNavViewController:(UINavigationController *)navController
+                              completion:(PasscodeCompletionBlock)completion
+{
+    if (![navController isKindOfClass:[UINavigationController class]])
+    {
+        if (completion){
+            completion(NO, nil);
+        }
+        return;
+    }
+    
+    _completion = completion;
+    [self openPasscodeWithMode:0 sheetNavController:navController];
+}
+- (void) showPasscodeInSheetNavViewController:(UINavigationController *)navController
+                                   strictAuth:(BOOL) strictAuth
+                                resetPassWord:(BOOL) resetPassWord
+                                   completion:(PasscodeCompletionBlock)completion
+{
+    if (![navController isKindOfClass:[UINavigationController class]])
+    {
+        if (completion){
+            completion(NO, nil);
+        }
+        return;
+    }
+    
+    NSAssert([self isPasscodeSet], @"No passcode set");
+    _completion = completion;
+    
+    double maxAttemptsTime = [self maxAttemptsTime];
+    
+    if (maxAttemptsTime >0)
+    {
+        NSTimeInterval curTimestamp = [[NSDate date] timeIntervalSince1970];
+        //last is max attemp need to wait unitl ....
+        if (curTimestamp < maxAttemptsTime+_config.maxAttemptsFailWaitSeconds){
+            NSError *error = [NSError errorWithDomain:@"DMPasscode"
+                                                 code:DMMaxAttempts
+                                             userInfo:nil];
+            _completion(NO, error);
+            return;
+        }
+    }
+    // show pass code view
+    DMPassCodeModes mode = DMPassCodeSetUp;
+    if (resetPassWord){
+        mode = DMPassCodeResetInput;
+    }
+    else if (strictAuth){
+        mode = DMPasscodeStrictAuth;
+    }
+    else{
+        mode = DMPassCodeInput;
+    }
+    
+    [self openPasscodeWithMode:mode sheetNavController:navController];
+}
+
+- (void)showResetPasscodeInSheetNavViewController:(UINavigationController *)navController
+                                      completion:(PasscodeCompletionBlock)completion
+{
+    
+    //check old first
+    [self showPasscodeInSheetNavViewController:navController
+                                    strictAuth:NO
+                                 resetPassWord:YES
+                                    completion:completion];
+    
+}
+
 #pragma mark - Private
 - (UIViewController *) strictPasscodeVC
 {
-    _mode = 3;
+    _mode = DMPasscodeStrictAuthC;
     _count = 0;
+    _pushInSheetNav = NO;
     _passcodeViewController =
     [[DMPasscodeInternalViewController alloc] initWithDelegate:self
                                                         config:_config
@@ -222,9 +338,12 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     return nc;
 }
 
-- (void)openPasscodeWithMode:(int)mode viewController:(UIViewController *)viewController {
+- (void)openPasscodeWithMode:(DMPassCodeModes) mode
+              viewController:(UIViewController *) viewController
+{
     _mode = mode;
     _count = 0;
+    _pushInSheetNav = NO;
     _passcodeViewController =
     [[DMPasscodeInternalViewController alloc] initWithDelegate:self
                                                         config:_config
@@ -249,30 +368,90 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
             }];
         }
     }];
-    if (_mode == 0) {
+    if (_mode == DMPassCodeSetUp) {
         [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_new_code", nil)];
         
         NSString *htmlString = NSLocalizedString(@"dmpasscode_enter_new_code_detail", nil);                
         [_passcodeViewController setDetail:htmlString
                                  tapTarget:self
                                  tapAction:@selector(tapDetail:)];
-    } else if (_mode == 1) {
+    } else if (_mode == DMPassCodeInput || _mode == DMPassCodeResetInput) {
         [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_to_unlock", nil)];
     }
-    else if (_mode == 2) {
+    else if (_mode == DMPasscodeStrictAuth) {
         [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_to_unlock", nil)];
         nc.navigationItem.leftBarButtonItem = NULL;
     }
 }
 
-- (void)closeAndNotify:(BOOL)success withError:(NSError *)error {
-    if (_passcodeViewController.presentingViewController != NULL) {
-    [_passcodeViewController dismissViewControllerAnimated:YES completion:^() {
+- (void)closeAndNotify:(BOOL)success withError:(NSError *)error
+{
+    
+    if ([_passcodeViewController.navigationController isKindOfClass:[DMPasscodeInternalNavigationController class]] &&
+        _passcodeViewController.presentingViewController != NULL)
+    {
+        [_passcodeViewController dismissViewControllerAnimated:YES completion:^() {
+            _completion(success, error);
+        }];
+    }
+    else if ([_passcodeViewController.navigationController isKindOfClass:[UINavigationController class]] &&
+             _pushInSheetNav == YES)
+    {
+        [_passcodeViewController.navigationController popViewControllerAnimated:YES];
         _completion(success, error);
-    }];
-}
+        _pushInSheetNav = NO;
+    }
     else {
        _completion(success, error);
+    }
+}
+
+- (void)openPasscodeWithMode:(DMPassCodeModes)mode
+          sheetNavController:(UINavigationController *)navController
+{
+    _mode = mode;
+    _count = 0;
+    _pushInSheetNav = YES;
+    _passcodeViewController =
+    [[DMPasscodeInternalViewController alloc] initWithDelegate:self
+                                                        config:_config
+                                                  needCloseBtn:NO
+                                                pushInSheetNav:YES];
+    
+    [navController completionhandler_pushViewController:_passcodeViewController
+                                               animated:YES
+                                             completion:^
+    {
+        LAContext* context = [[LAContext alloc] init];
+        if ([self canUseBioIdInsteadOfPin] &&
+            [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:nil])
+        {
+            [context evaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics
+                    localizedReason:NSLocalizedString(@"dmpasscode_touchid_reason", nil) reply:^(BOOL success, NSError* error)
+             {
+                 if (success) {
+                     dispatch_async(dispatch_get_main_queue(), ^{
+                         [self closeAndNotify:YES withError:nil];
+                     });
+                 }
+             }];
+        }
+    }];
+    
+    
+    if (_mode == DMPassCodeSetUp) {
+        [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_new_code", nil)];
+        
+        NSString *htmlString = NSLocalizedString(@"dmpasscode_enter_new_code_detail", nil);
+        [_passcodeViewController setDetail:htmlString
+                                 tapTarget:self
+                                 tapAction:@selector(tapDetail:)];
+    } else if (_mode == DMPassCodeInput || _mode == DMPassCodeResetInput) {
+        [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_to_unlock", nil)];
+    }
+    else if (_mode == DMPasscodeStrictAuth) {
+        [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_to_unlock", nil)];
+        navController.navigationItem.leftBarButtonItem = NULL;
     }
 }
 
@@ -280,7 +459,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 - (void)viewDidAppear
 {
     NSLog(@"%s _mode %d",__func__, _mode);
-    if (_mode == 3)
+    if (_mode == DMPasscodeStrictAuthC)
     {
         
         LAContext* context = [[LAContext alloc] init];
@@ -305,7 +484,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     }
 }
 - (void)enteredCode:(NSString *)code {
-    if (_mode == 0) {
+    if (_mode == DMPassCodeSetUp) {
         if (_count == 0) {
             _prevCode = code;
             [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_repeat", nil)];
@@ -323,9 +502,25 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
                 return;
             }
         }
-    } else if (_mode == 1 || _mode == 2 || _mode == 3) {
-        if ([code isEqualToString:[[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME]]) {
-            [self closeAndNotify:YES withError:nil];
+    } else if (_mode == DMPassCodeInput ||
+               _mode == DMPassCodeResetInput ||
+               _mode == DMPasscodeStrictAuth ||
+               _mode == DMPasscodeStrictAuthC)
+    {
+        if ([code isEqualToString:[[DMKeychain defaultKeychain] objectForKey:KEYCHAIN_NAME]])
+        {
+            if (_mode == DMPassCodeResetInput)
+            {
+                //ask user to input new code
+                _mode = DMPassCodeSetUp;
+                [_passcodeViewController setInstructions:NSLocalizedString(@"dmpasscode_enter_new_code", nil)];
+                [_passcodeViewController reset];
+                _count = 0;
+                return;
+            }
+            else {
+                [self closeAndNotify:YES withError:nil];
+            }
         } else {
             
             if (_config.maxAttempts > 0){

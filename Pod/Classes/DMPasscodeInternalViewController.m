@@ -21,7 +21,7 @@
     UILabel* _error;
     DMPasscodeConfig* _config;
     UIButton* _detail;
-    BOOL _needCloseBtn;
+    BOOL _needCloseBtn, _pushInSheetNav;
 }
 
 - (id)initWithDelegate:(id<DMPasscodeInternalViewControllerDelegate>)delegate
@@ -40,15 +40,42 @@
     return self;
 }
 
+- (id)initWithDelegate:(id<DMPasscodeInternalViewControllerDelegate>)delegate
+                config:(DMPasscodeConfig *)config
+          needCloseBtn:(BOOL)needCloseBtn
+        pushInSheetNav:(BOOL)pushInSheetNav
+{
+    if (self = [self initWithDelegate:delegate
+                           config:config
+                     needCloseBtn:needCloseBtn])
+    {
+        _pushInSheetNav = pushInSheetNav;
+    }
+    return self;    
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = _config.backgroundColor;
     self.navigationController.navigationBar.barTintColor = _config.navigationBarBackgroundColor;
-    if (_needCloseBtn){
-    UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(close:)];
-    closeItem.tintColor = _config.navigationBarForegroundColor;
-    self.navigationItem.leftBarButtonItem = closeItem;
+    if (_needCloseBtn && !_pushInSheetNav)
+    {
+        UIBarButtonItem* closeItem = nil;
+        if (_config.closeImgName){
+            closeItem = [self barButtonItemForImageName:_config.closeImgName
+                                                 target:self
+                                                 action:@selector(close:)];
+        }
+        else {
+            closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(close:)];
+        }
+        
+        closeItem.tintColor = _config.navigationBarForegroundColor;
+        self.navigationItem.leftBarButtonItem = closeItem;
     }
+    
+    
+    
     self.navigationController.navigationBar.barStyle = (UIBarStyle)_config.statusBarStyle;
     self.navigationController.navigationBar.titleTextAttributes = @{NSFontAttributeName :_config.navigationBarFont,
                                                                     NSForegroundColorAttributeName: _config.navigationBarTitleColor};
@@ -119,6 +146,24 @@
     _detail.titleLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
     [self.view addSubview:_detail];
 }
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    if (_pushInSheetNav && [[self.navigationController viewControllers] count] >0)
+    {
+        UIBarButtonItem* backItem = nil;
+        if (_config.backImgName){
+            backItem = [self barButtonItemForImageName:_config.backImgName
+                                                target:self
+                                                action:@selector(back:)];
+        }
+        else {
+            backItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemRewind target:self action:@selector(back:)];
+        }
+        
+        backItem.tintColor = _config.navigationBarForegroundColor;
+        self.navigationItem.leftBarButtonItem = backItem;
+    }
+}
 
 - (void)viewDidAppear:(BOOL)animated{
     [super viewDidAppear:animated];
@@ -169,7 +214,17 @@
 
 - (void)close:(id)sender {
     [_input resignFirstResponder];
-    [self dismissViewControllerAnimated:YES completion:nil];
+    if (_pushInSheetNav){
+        [self.navigationController popViewControllerAnimated:YES];
+    }
+    else {
+        [self dismissViewControllerAnimated:YES completion:nil];
+    }
+    [_delegate canceled];
+}
+
+- (void)back:(id)sender {
+    [_input resignFirstResponder];
     [_delegate canceled];
 }
 
@@ -230,6 +285,26 @@
     }
 }
 
-
+- (UIBarButtonItem *) barButtonItemForImageName:(NSString *)imageName
+                                         target:(id)target
+                                         action:(SEL)action
+{
+    UIButton            *button;
+    UIBarButtonItem        *item;
+    
+    button = [[UIButton alloc] initWithFrame:CGRectMake(0.0, 0.0, 44.0, 44.0)];
+    UIImage *img = [UIImage imageNamed:imageName];
+    [button setImage:img
+            forState:UIControlStateNormal];
+    
+    button.autoresizingMask =
+    (UIViewAutoresizingFlexibleWidth |
+     UIViewAutoresizingFlexibleHeight);
+    [[button imageView] setContentMode:UIViewContentModeScaleAspectFit];
+    [button addTarget:target action:action forControlEvents:UIControlEventTouchUpInside];
+    
+    item = [[UIBarButtonItem alloc] initWithCustomView:button];
+    return item;
+}
 
 @end

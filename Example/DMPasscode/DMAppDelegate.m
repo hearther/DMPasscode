@@ -9,12 +9,17 @@
 #import "DMAppDelegate.h"
 #import <DMPasscode/DMPasscode.h>
 
+#define IDIOM    UI_USER_INTERFACE_IDIOM()
+#define IPAD     UIUserInterfaceIdiomPad
+
 @implementation DMAppDelegate {
     UIViewController* _rootViewController;
     UIButton* _setupButton;
     UIButton* _checkButton;
     UIButton* _removeButton;
+    UIButton* _resetButton;
     BOOL _showingPasscode;
+    UINavigationController *_sheetNavController;
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {    
@@ -61,12 +66,64 @@
     [_removeButton setTitleColor:[UIColor lightGrayColor] forState:UIControlStateDisabled];
     [_removeButton addTarget:self action:@selector(actionRemove:) forControlEvents:UIControlEventTouchUpInside];
     [_rootViewController.view addSubview:_removeButton];
+    
+    
+    _resetButton = [[UIButton alloc] initWithFrame:CGRectMake(0, 200, _rootViewController.view.frame.size.width, 50)];
+    [_resetButton setTitle:@"Reset" forState:UIControlStateNormal];
+    [_resetButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [_resetButton setTitleColor:[UIColor lightGrayColor] forState:UIControlStateDisabled];
+    [_resetButton addTarget:self action:@selector(actionReset:) forControlEvents:UIControlEventTouchUpInside];
+    [_rootViewController.view addSubview:_resetButton];
 }
 
 - (void)actionSetup:(UIButton *)sender {
-    [DMPasscode setupPasscodeInViewController:_rootViewController completion:^(BOOL success, NSError *error) {
-        [self updateViews];
-    }];
+    if ( IDIOM == IPAD )
+    {
+        //root view controller
+        UIViewController *vc = [[UIViewController alloc] init];
+        UINavigationController *nav =
+        [[UINavigationController alloc] initWithRootViewController:vc];
+        nav.modalPresentationStyle = UIModalPresentationFormSheet;
+        nav.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
+        
+        _sheetNavController = nav;
+        UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(closeSheetNav:)];
+        vc.navigationItem.leftBarButtonItem = closeItem;
+        
+        [_rootViewController presentViewController:_sheetNavController
+                                          animated:YES
+                                        completion:^
+        {
+            [DMPasscode setupPasscodeInSheetNavViewController:_sheetNavController
+                                                   completion:^(BOOL success, NSError *error)
+             {
+                if (success &&
+                    [DMPasscode isDeviceSupportBioId])
+                {
+//                    [DMPasscode setCanUseBioIdInsteadOfPin:YES];
+                }
+                 [_sheetNavController dismissViewControllerAnimated:YES
+                                         completion:^
+                 {
+                        [self updateViews];
+                 }];
+
+            }];
+        }];
+
+
+
+    }
+    else
+    {
+        [DMPasscode setupPasscodeInViewController:_rootViewController completion:^(BOOL success, NSError *error) {
+            if ([DMPasscode isDeviceSupportBioId]){
+                [DMPasscode setCanUseBioIdInsteadOfPin:YES];
+            }
+            
+            [self updateViews];
+        }];
+    }
 }
 
 - (void)actionCheck:(UIButton *)sender {
@@ -79,7 +136,7 @@
             if (error) {
                 // Failed authentication
                 [sender setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
-                NSLog(@"%d", error.code);
+                NSLog(@"%ld", (long)error.code);
             } else {
                 // Cancelled
                 [sender setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
@@ -89,16 +146,59 @@
     }];
 }
 
+- (void)closeSheetNav:(id)sender
+{
+    if (_sheetNavController){
+        [_sheetNavController dismissViewControllerAnimated:YES completion:nil];
+    }
+    
+}
 - (void)actionRemove:(id)sender {
     [DMPasscode removePasscode];
     [_checkButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     [self updateViews];
+}
+- (void)actionReset:(id)sender
+{
+    
+    if ( IDIOM == IPAD )
+    {
+        //root view controller
+        UIViewController *vc = [[UIViewController alloc] init];
+        UINavigationController *nav =
+        [[UINavigationController alloc] initWithRootViewController:vc];
+        nav.modalPresentationStyle = UIModalPresentationFormSheet;
+        nav.modalTransitionStyle = UIModalTransitionStyleCoverVertical;
+        
+        _sheetNavController = nav;
+        UIBarButtonItem* closeItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemStop target:self action:@selector(closeSheetNav:)];
+        vc.navigationItem.leftBarButtonItem = closeItem;
+        
+        [_rootViewController presentViewController:_sheetNavController
+                                          animated:YES
+                                        completion:^
+         {
+            [DMPasscode showResetPasscodeInSheetNavViewController:_sheetNavController
+                                                       completion:^(BOOL success, NSError *error)
+             {
+                 
+                 [_sheetNavController dismissViewControllerAnimated:YES
+                                                         completion:^
+                  {
+                      [self updateViews];
+                  }];
+             }];
+         }];
+    }
 }
 
 - (void)updateViews {
     BOOL passcodeSet = [DMPasscode isPasscodeSet];
     _checkButton.enabled = passcodeSet;
     _removeButton.enabled = passcodeSet;
+    if ( IDIOM == IPAD ){
+        _resetButton.enabled = passcodeSet;
+    }
 }
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {

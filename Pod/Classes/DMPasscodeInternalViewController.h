@@ -30,4 +30,10 @@
 - (void)setDetail:(NSString *)detail
         tapTarget:(id) target
         tapAction:(SEL)action;
+
+
+- (id)initWithDelegate:(id<DMPasscodeInternalViewControllerDelegate>)delegate
+                config:(DMPasscodeConfig *)config
+          needCloseBtn:(BOOL)needCloseBtn
+        pushInSheetNav:(BOOL)pushInSheetNav;
 @end

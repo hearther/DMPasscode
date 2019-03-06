@@ -2,7 +2,7 @@ PODS:
   - DMPasscode (2.0.1):
     - GRAESCrypt (~> 1.0)
   - Expecta (0.4.0)
-  - Expecta+Snapshots (1.3.2):
+  - "Expecta+Snapshots (1.3.2)":
     - Expecta (~> 0.3)
     - FBSnapshotTestCase (= 1.6)
   - FBSnapshotTestCase (1.6)
@@ -12,23 +12,31 @@ PODS:
 DEPENDENCIES:
   - DMPasscode (from `../`)
   - Expecta (= 0.4.0)
-  - Expecta+Snapshots (= 1.3.2)
+  - "Expecta+Snapshots (= 1.3.2)"
   - FBSnapshotTestCase (= 1.6)
   - GRAESCrypt (~> 1.0)
   - Specta (= 0.2.1)
 
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - Expecta
+    - "Expecta+Snapshots"
+    - FBSnapshotTestCase
+    - GRAESCrypt
+    - Specta
+
 EXTERNAL SOURCES:
   DMPasscode:
-    :path: ../
+    :path: "../"
 
 SPEC CHECKSUMS:
-  DMPasscode: 37e2832e751024bf90431cbfcf372041f7411670
+  DMPasscode: 2181c22fbb0c1cf9253db5e2b7a7e179ce207b5e
   Expecta: 392a6b5bfb9f4097e47dd8064d9b732079490332
-  Expecta+Snapshots: 40c5ec43b43da3bae957f14fed5dc9177d08ec8b
+  "Expecta+Snapshots": 40c5ec43b43da3bae957f14fed5dc9177d08ec8b
   FBSnapshotTestCase: 9d5fe43b29ae3a0ed8fc829477971b281038f748
   GRAESCrypt: 25d8f5566827282a4aeb586fe32a8c6130ac734a
   Specta: 15a276a6343867b426d5ed135d5aa4d04123a573
 
 PODFILE CHECKSUM: a90b020f9b39a4703f7a50555fe138f1354e340d
 
-COCOAPODS: 1.0.1
+COCOAPODS: 1.5.3

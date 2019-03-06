@@ -33,6 +33,8 @@
         self.passFieldNum = 4;
         self.maxAttemptsFailWaitSeconds = 120;
         self.maxAttempts = 3;
+        self.closeImgName = nil;
+        self.backImgName = nil;
     }
     return self;
 }

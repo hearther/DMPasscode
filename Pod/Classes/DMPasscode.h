@@ -18,6 +18,7 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
     DMMaxAttempts    = -2
 };
 
+
 /**
  *  The passcode screen has to be manually opened. You decide when it should be presented.
  *  The chosen code is stored inside the keychain.
@@ -86,5 +87,27 @@ typedef NS_ENUM(NSInteger, DMUnlockErrorCodes)
 
 //RESET KEYCHAIN
 + (void)resetKeyChain;
+
+// added by bunny
+
+/**
+ *  Setup a new passcode.
+ *
+ *  @param navController The view controller in which the passcode screen will be pushed in
+ *  @param completion     The completion block with a BOOL to inidcate if authentication was successful (and NSError if not)
+ */
++ (void)setupPasscodeInSheetNavViewController:(UINavigationController *)navController
+                                   completion:(PasscodeCompletionBlock)completion;
+
+/**
+ *  This function is used for user to auth first then reset new passcode
+ *
+ *  @param navController The view controller in which the passcode screen will be pushed
+ *  @param completion     The completion block with a BOOL to inidcate if the authentication was successful (and NSError if not)
+ */
++ (void)showResetPasscodeInSheetNavViewController:(UINavigationController *)navController
+                                       completion:(PasscodeCompletionBlock)completion;
+
+
 
 @end
