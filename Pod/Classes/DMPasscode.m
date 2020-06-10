@@ -80,11 +80,15 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     if (self = [super init]) {
         _config = [[DMPasscodeConfig alloc] init];
     }
+    
+    NSNotificationCenter *defaultCenter = [NSNotificationCenter defaultCenter];
+    [defaultCenter addObserver:self selector:@selector(applicationDidEnterBackground:) name:UIApplicationDidEnterBackgroundNotification object:nil];
     return self;
 }
-
-
-
+- (void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
 
 + (NSBundle*)bundleWithName:(NSString*)name {
     NSString* mainBundlePath = [[NSBundle mainBundle] resourcePath];
@@ -361,9 +365,7 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
                     localizedReason:NSLocalizedString(@"dmpasscode_touchid_reason", nil) reply:^(BOOL success, NSError* error)
             {
                 if (success) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        [self closeAndNotify:YES withError:nil];
-                    });
+                    [self closeAndNotify:YES withError:nil];
                 }
             }];
         }
@@ -386,24 +388,25 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
 
 - (void)closeAndNotify:(BOOL)success withError:(NSError *)error
 {
-    
-    if ([_passcodeViewController.navigationController isKindOfClass:[DMPasscodeInternalNavigationController class]] &&
-        _passcodeViewController.presentingViewController != NULL)
-    {
-        [_passcodeViewController dismissViewControllerAnimated:YES completion:^() {
-            _completion(success, error);
-        }];
-    }
-    else if ([_passcodeViewController.navigationController isKindOfClass:[UINavigationController class]] &&
-             _pushInSheetNav == YES)
-    {
-        [_passcodeViewController.navigationController popViewControllerAnimated:YES];
-        _completion(success, error);
-        _pushInSheetNav = NO;
-    }
-    else {
-       _completion(success, error);
-    }
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if ([self->_passcodeViewController.navigationController isKindOfClass:[DMPasscodeInternalNavigationController class]] &&
+            self->_passcodeViewController.presentingViewController != NULL)
+        {
+            [self->_passcodeViewController dismissViewControllerAnimated:YES completion:^() {
+                self->_completion(success, error);
+            }];
+        }
+        else if ([self->_passcodeViewController.navigationController isKindOfClass:[UINavigationController class]] &&
+                 self->_pushInSheetNav == YES)
+        {
+            [self->_passcodeViewController.navigationController popViewControllerAnimated:YES];
+            self->_completion(success, error);
+            self->_pushInSheetNav = NO;
+        }
+        else {
+           self->_completion(success, error);
+        }
+    });
 }
 
 - (void)openPasscodeWithMode:(DMPassCodeModes)mode
@@ -556,4 +559,19 @@ NSString * const DMUnlockErrorDomain = @"com.dmpasscode.error.unlock";
     }
     
 }
+
+- (void)applicationDidEnterBackground:(NSNotification *)notification
+{
+  if (_mode == DMPassCodeSetUp ||
+      _mode == DMPassCodeInput ||
+      _mode == DMPassCodeResetInput)
+  {
+      if (_passcodeViewController)
+      {
+          [self closeAndNotify:NO withError:nil];
+      }
+  }
+  
+}
+
 @end
